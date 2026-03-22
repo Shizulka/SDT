@@ -2,7 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from contextlib import asynccontextmanager
-from src.infrastructure.database import get_db, db_ping
+from src.infrastructure.database import get_db
+from src.controller import note_control 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,3 +27,5 @@ def health_check(db: Session = Depends(get_db)):
 @app.get("/alive")
 def root():
     return {"message": "робе"}
+
+app.include_router(note_control.router)

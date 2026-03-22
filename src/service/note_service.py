@@ -12,6 +12,9 @@ class NoteService:
 
     def get_all_note(self):
         return self.db.query(Note).all()
+    
+    def gat_id_note(self , note_id : int):
+        return self.repository.get_by_id(note_id)
 
     def create_note (self , title : str , conten : str ):
         new_note = Note (title=title , conten = conten )

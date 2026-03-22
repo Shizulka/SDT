@@ -19,3 +19,10 @@ def get_all_note ( db :Session = Depends (get_db)):
 
     print("dani" , notes)
     return notes
+
+@router.get ("/note_by_id")
+def get_id_note (note_id : int ,  db :Session = Depends (get_db)):
+    service = NoteService(db)
+
+    note = service.gat_id_note(note_id)
+    return note 

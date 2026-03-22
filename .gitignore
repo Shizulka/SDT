@@ -1,0 +1,9 @@
+_pycahe_/
+*.pyc
+
+venv/
+.venv/
+
+.idea/
+.vscode/
+.coverage

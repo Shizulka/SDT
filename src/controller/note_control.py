@@ -12,15 +12,15 @@ def create_note (title : str , conten : str ,  db :Session = Depends (get_db)):
 
     return {"name" : note.title , "conten" : note.conten }
 
-@router.get ("/all_note")
+@router.get ("/note")
 def get_all_note ( db :Session = Depends (get_db)):
     service = NoteService(db)
     notes = service.get_all_note()
 
-    print("dani" , notes)
-    return notes
+    result = [{"id": note.note_id, "title" : note.title} for note in notes]
+    return result
 
-@router.get ("/note_by_id")
+@router.get ("/note/<id>")
 def get_id_note (note_id : int ,  db :Session = Depends (get_db)):
     service = NoteService(db)
 

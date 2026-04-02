@@ -11,7 +11,7 @@ class NoteService:
 
 
     def get_all_note(self):
-        return self.db.query(Note).all()
+        return self.db.query(Note.note_id , Note.title).all()
     
     def gat_id_note(self , note_id : int):
         return self.repository.get_by_id(note_id)

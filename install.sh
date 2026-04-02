@@ -1,3 +1,4 @@
+#!/bin/bash
 
 if [ "$EUID" -ne 0 ]; then
   echo "Need sudo"
@@ -42,24 +43,13 @@ python3 -m venv $APP_DIR/venv
 $APP_DIR/venv/bin/pip install -r $APP_DIR/requirements.txt
 chown -R app:app $APP_DIR/venv
 
-cat <<EOF > /etc/systemd/system/mywebapp.service
-[Unit]
-Description=MyWebApp Service
-After=network.target mysql.service
-
-[Service]
-User=app
-WorkingDirectory=$APP_DIR
-ExecStart=$APP_DIR/venv/bin/python main.py --port 8000 --db-url mysql+pymysql://app:12345678@127.0.0.1:3306/mywebapp
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
+cp $APP_DIR/src/infrastructure/mywebapp.socket /etc/systemd/system/
+cp $APP_DIR/src/infrastructure/mywebapp.service /etc/systemd/system/
 
 systemctl daemon-reload
-systemctl enable mywebapp
-systemctl start mywebapp
+
+systemctl enable mywebapp.socket
+systemctl start mywebapp.socket
 
 
 cat <<EOF > /etc/nginx/sites-available/mywebapp

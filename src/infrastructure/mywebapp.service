@@ -1,0 +1,14 @@
+[Unit]
+Description=MyWebApp Service
+Requires=mywebapp.socket
+After=network.target mysql.service mywebapp.socket
+
+[Service]
+User=app
+WorkingDirectory=/opt/mywebapp
+
+ExecStartPre=/opt/mywebapp/venv/bin/python main.py --migrate-only --db-url mysql+pymysql://app:12345678@127.0.0.1:3306/mywebapp
+
+ExecStart=/opt/mywebapp/venv/bin/python main.py
+Restart=always
+NonBlocking=true

@@ -1,7 +1,12 @@
+import argparse
+import os
+
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from contextlib import asynccontextmanager
+
+import uvicorn
 from src.infrastructure.database import get_db
 from src.controller import note_control 
 
@@ -13,6 +18,22 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--db-url", type=str, default="mysql+pymysql://app:12345678@127.0.0.1:3306/mywebapp")
+    parser.add_argument("--migrate-only", action="store_true", help="Тільки створити таблиці і вийти")
+    
+    args = parser.parse_args()
+
+    get_db(args.db_url)
+
+
+    if "LISTEN_PID" in os.environ:
+        uvicorn.run("src.infrastructure.main:app", fd=0)
+    else:
+        uvicorn.run("src.infrastructure.main:app", host="127.0.0.1", port=args.port)
 
 
 @app.get("/health")

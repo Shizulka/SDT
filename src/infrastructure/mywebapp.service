@@ -7,8 +7,8 @@ After=network.target mysql.service mywebapp.socket
 User=app
 WorkingDirectory=/opt/mywebapp
 
-ExecStartPre=/opt/mywebapp/venv/bin/python main.py --migrate-only --db-url mysql+pymysql://app:12345678@127.0.0.1:3306/mywebapp
+ExecStartPre=/opt/mywebapp/venv/bin/python -m src/infrastructure/main.py  --migrate-only --db-url mysql+pymysql://app:12345678@127.0.0.1:3306/mywebapp
 
-ExecStart=/opt/mywebapp/venv/bin/python main.py
+ExecStart=/opt/mywebapp/venv/bin/python -m src/infrastructure/main.py 
 Restart=always
 NonBlocking=true

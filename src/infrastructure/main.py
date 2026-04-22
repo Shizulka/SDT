@@ -5,7 +5,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from contextlib import asynccontextmanager
-
+from src.infrastructure.database import engine
+from src.infrastructure.models import Base
 import uvicorn
 from src.infrastructure.database import get_db
 from src.controller import note_control 
@@ -23,11 +24,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--db-url", type=str, default="mysql+pymysql://app:12345678@127.0.0.1:3306/mywebapp")
-    parser.add_argument("--migrate-only", action="store_true", help="Тільки створити таблиці і вийти")
+    parser.add_argument("--migrate-only", action="store_true")
     
     args = parser.parse_args()
 
-    get_db(args.db_url)
+    Base.metadata.create_all(bind=engine)
 
 
     if "LISTEN_PID" in os.environ:

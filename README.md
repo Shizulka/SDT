@@ -115,8 +115,8 @@ Go компілятор ,вихідний код ,зайві файли
 
 ## Порівняння образів
 
-Python (Debian) -	1.82 GB
-Python (Alpine) - 233 MB
+Python (Debian) -	1.82 GB ,
+Python (Alpine) - 233 MB,
 Go (full) -	1.33 GB
 
 ### Висновок

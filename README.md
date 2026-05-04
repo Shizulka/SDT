@@ -1,4 +1,4 @@
-# Звіт з лабораторної роботи номер1 :
+# Звіт з лабораторної роботи номер 1:
 
 ## 1. Варіант завдання
 Розрахунок варіанту:
@@ -38,3 +38,96 @@
 * **teacher** (пароль: `12345678`)
 * **operator** (пароль: `12345678`) — має права `sudo` виключно для керування сервісом застосунку (`systemctl start/stop/restart/status mywebapp`) та веб-сервером (`systemctl reload nginx`).
 * Файл-маркер із заліковою книжкою згенеровано за шляхом `/home/student/gradebook`.
+
+# Звіт з лабораторної роботи номер 2:
+
+## Дослідницька частина
+### Dockerfile (неоптимальний)
+
+```dockerfile
+FROM python:3.12
+WORKDIR /app
+COPY . .
+RUN pip install -r requirements/backend.in
+CMD ["uvicorn", "spaceship.main:app", "--host", "0.0.0.0", "--port", "8080"]
+```
+
+#### Результати:
+Час збірки: ~28–29 с
+Розмір: 1.82 GB
+Аналіз
+
+Образ дуже великий, оскільки містить: всі залежності , кеші
+
+### Оптимізація Dockerfile 
+
+```dockerfile
+FROM python:3.10-alpine
+WORKDIR /app
+
+COPY requirements/backend.in .
+RUN pip install --no-cache-dir -r backend.in
+
+COPY . .
+
+CMD ["uvicorn", "spaceship.main:app", "--host", "0.0.0.0", "--port", "8080"]
+```
+
+#### Результати:
+Перша збірка: ~33 с
+Повторна збірка: 0.8–1.8 с
+Розмір: 233 MB
+
+Використовується кеш Docker , залежності не перевстановлюються ,значно менший образ (Alpine)
+
+### DNS
+
+### Результат (Ubuntu):
+10.0.0.50 myservice.internal.corp
+##### Логи DNS
+myservice.internal → NXDOMAIN
+myservice.internal.corp → 10.0.0.50
+
+Ubuntu автоматично додає .corp (search domain).
+DNS спочатку не знаходить ім’я, але після доповнення — працює.
+
+Go образ (без оптимізації)
+```dockerfile
+FROM golang:1.22
+
+WORKDIR /app
+
+COPY . .
+
+RUN go build -o fizzbuzz
+
+CMD ["./fizzbuzz", "serve"]
+```
+
+### Результати
+Час: ~60 с
+Розмір: 1.33 GB
+Аналіз
+
+Містить:
+
+Go компілятор ,вихідний код ,зайві файли
+
+## Порівняння образів
+
+Python (Debian) -	1.82 GB
+Python (Alpine) - 233 MB
+Go (full) -	1.33 GB
+
+### Висновок
+Використання Alpine значно зменшує розмір образу.
+Правильний порядок шарів прискорює повторну збірку.
+Docker кеш дозволяє зменшити час до <1 секунди.
+DNS поводиться по-різному залежно від базового образу.
+Неоптимізовані образи містять багато зайвих файлів.
+
+## Практична частина:
+Для запуску всього стеку на будь-якій машині з встановленим Docker:
+
+Запустіть контейнери у фоновому режимі:
+docker-compose up -d --build

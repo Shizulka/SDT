@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+
+  db:
+    image: mariadb:10.11
+    container_name: notes_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mywebapp
+      MYSQL_USER: app
+      MYSQL_PASSWORD: "12345678"
+    volumes:
+      - db_data:/var/lib/mysql   
+    networks:
+      - custom_network           
+
+  
+  app:
+    build: .                     
+    container_name: notes_app
+    restart: unless-stopped
+    depends_on:
+      - db                       
+    environment:
+      
+      - DATABASE_URL=mysql+pymysql://app:12345678@db:3306/mywebapp
+    command: >
+      bash -c "python -m src.infrastructure.main --migrate-only && 
+               uvicorn src.infrastructure.main:app --host 0.0.0.0 --port 8000"
+    networks:
+      - custom_network
+
+ 
+  nginx:
+    image: nginx:alpine
+    container_name: notes_nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"                  
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro 
+    networks:
+      - custom_network
+
+networks:
+  custom_network:
+    driver: bridge
+
+volumes:
+  db_data:

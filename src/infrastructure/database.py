@@ -4,8 +4,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from src.infrastructure.models import Note , Base
 
-
-SQLALCHEMY_DATABASE_URL = "mysql+pymysql://app:12345678@127.0.0.1:3306/mywebapp"
+sudo docker compose down
+SQLALCHEMY_DATABASE_URL = "mysql+pymysql://app:12345678@db:3306/mywebapp"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 

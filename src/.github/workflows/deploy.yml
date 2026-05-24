@@ -1,0 +1,30 @@
+name: Deploy
+
+on:
+  push:
+    tags: [ "v*" ]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to target node
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          chmod +x scripts/deploy.sh
+          scripts/deploy.sh "${{ secrets.TARGET_HOST }}" "${{ secrets.TARGET_USER }}" "ghcr.io/${{ github.repository_owner }}/sdt:${{ github.ref_name }}"
+
+      - name: Verify deployment
+        run: |
+          chmod +x scripts/verify.sh
+          scripts/verify.sh "http://${{ secrets.TARGET_HOST }}"

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Python lint
+        run: |
+          flake8 src --max-line-length=120
+
+      - name: Dockerfile lint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: dockerfile
+
+      - name: Shell scripts lint
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: scripts
+
+      - name: YAML lint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: .github/workflows
+
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=src --cov-report=term --cov-report=html --cov-fail-under=40
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov

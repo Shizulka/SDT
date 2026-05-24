@@ -3,3 +3,8 @@ uvicorn
 sqlalchemy>=2.0
 psycopg2-binary
 pymysql
+pytest
+pytest-cov
+flake8
+mypy
+httpx

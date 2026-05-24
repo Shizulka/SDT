@@ -56,3 +56,19 @@ jobs:
         with:
           name: coverage-report
           path: htmlcov
+
+services:
+  db:
+    image: mariadb:11
+    env:
+      MYSQL_DATABASE: mywebapp
+      MYSQL_USER: app
+      MYSQL_PASSWORD: 12345678
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - 3306:3306
+    options: >-
+      --health-cmd="mariadb-admin ping -h 127.0.0.1 -uroot -prootpassword"
+      --health-interval=10s
+      --health-timeout=5s
+      --health-retries=5

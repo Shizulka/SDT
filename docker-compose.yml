@@ -21,6 +21,7 @@ services:
       DATABASE_URL: mysql+pymysql://${DB_USER}:${DB_PASSWORD}@db:3306/${DB_NAME}
     ports:
       - "8000:8000"
+    command: uvicorn src.infrastructure.main:app --host 0.0.0.0 --port 8000
 
 volumes:
   db_data:

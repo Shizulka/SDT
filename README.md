@@ -131,3 +131,270 @@ DNS поводиться по-різному залежно від базово�
 
 Запустіть контейнери у фоновому режимі:
 ```docker-compose up -d --build```
+
+# Звіт до лабораторної роботи 3
+
+---
+
+# 1. Структура проєкту
+
+У проєкті змінилась структура:
+
+```text
+.github/workflows/
+scripts/
+src/
+docker-compose.yml
+dockerfile
+requirements.txt
+README.md
+```
+
+---
+
+# 2. Реалізація CI (Continuous Integration)
+
+Для автоматичної перевірки коду було створено workflow `ci.yml`.
+
+CI запускається при:
+- push у main
+- pull request у main
+
+Основні етапи CI:
+- встановлення Python
+- встановлення залежностей
+- lint перевірка
+- запуск тестів
+- coverage аналіз
+
+---
+
+## 2.1 Workflow CI
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+```
+
+---
+
+# 3. Перевірка коду (Lint)
+
+Було використано:
+- flake8
+- shellcheck
+- yamllint
+- hadolint
+
+---
+
+## 3.1 Python lint
+
+```yaml
+- name: Python lint
+  run: |
+    flake8 src --max-line-length=120
+```
+
+---
+
+## 3.2 Dockerfile lint
+
+```yaml
+- name: Dockerfile lint
+  uses: hadolint/hadolint-action@v3.1.0
+```
+
+---
+
+# 4. Автоматичне тестування
+
+Для тестування використовувався pytest.
+
+---
+
+## 4.1 Тестування FastAPI
+
+```python
+from fastapi.testclient import TestClient
+from src.infrastructure.main import app
+
+client = TestClient(app)
+
+def test_docs_available():
+    response = client.get("/docs")
+    assert response.status_code == 200
+```
+
+---
+
+# 5. Coverage перевірка
+
+Було реалізовано coverage контроль:
+
+```yaml
+- name: Run tests with coverage
+  run: |
+    pytest --cov=src --cov-report=term --cov-report=html --cov-fail-under=40
+```
+
+Мінімальний coverage:
+
+```text
+40%
+```
+
+---
+
+# 6. Docker контейнеризація
+
+Для застосунку був створений Dockerfile.
+
+---
+
+## 6.1 Dockerfile
+
+```dockerfile
+FROM python:3.12
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["uvicorn", "src.infrastructure.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+---
+
+# 7. Docker Compose
+
+Для запуску застосунку та MariaDB використовувався docker-compose.
+
+---
+
+## 7.1 docker-compose.yml
+
+```yaml
+services:
+  db:
+    image: mariadb:11
+    container_name: sdt-db
+
+  app:
+    image: ghcr.io/shizulka/sdt:latest
+    container_name: sdt-app
+```
+
+---
+
+# 8. GitHub Container Registry (GHCR)
+
+Docker image автоматично завантажувався у GitHub Container Registry.
+
+---
+
+## 8.1 Docker build workflow
+
+```yaml
+- name: Build and push
+  uses: docker/build-push-action@v6
+```
+
+---
+
+# 9. Self-hosted Runner
+
+Для виконання deploy workflow використовувався self-hosted runner на окремій віртуальній машині Linux Mint.
+
+Runner був налаштований через:
+
+```bash
+./config.sh
+./run.sh
+```
+
+---
+
+# 10. Реалізація CD (Continuous Deployment)
+
+Deploy запускався автоматично після створення git tag:
+
+```bash
+git tag -a v1.0.16 -m "redeploy"
+git push origin v1.0.16
+```
+
+---
+
+# 11. Deploy Script
+
+Було реалізовано автоматичний deploy через SSH.
+
+---
+
+## 11.1 deploy.sh
+
+```bash
+ssh "$TARGET_USER@$TARGET_HOST" "
+  cd /opt/mywebapp &&
+  docker pull '$IMAGE_TAG' &&
+  sudo systemctl restart sdt-app
+"
+```
+
+---
+
+# 12. Systemd Service
+
+Для автоматичного запуску контейнерів використовувався systemd service.
+
+---
+
+## 12.1 sdt-app.service
+
+```ini
+[Unit]
+Description=SDT application container
+
+[Service]
+WorkingDirectory=/opt/mywebapp
+ExecStart=/usr/bin/docker-compose up -d
+ExecStop=/usr/bin/docker-compose down
+```
+
+---
+
+# 13. Перевірка роботи застосунку
+
+Після deploy було перевірено:
+- запуск контейнерів
+- доступність FastAPI
+- роботу Swagger документації
+
+---
+
+## 13.1 Перевірка контейнерів
+
+```bash
+docker ps
+```
+
+---
+
+## 13.2 Перевірка FastAPI
+
+```bash
+curl http://localhost:8000/docs
+```
+
+

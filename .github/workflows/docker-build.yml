@@ -26,7 +26,7 @@ jobs:
       - name: Set Docker tags
         id: meta
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/sdt
+          IMAGE=ghcr.io/shizulka/sdt
           SHA_TAG=$IMAGE:sha-${{ github.sha }}
 
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then

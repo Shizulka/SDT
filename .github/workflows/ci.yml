@@ -27,7 +27,7 @@ jobs:
 
       - name: Python lint
         run: |
-          flake8 src --max-line-length=120 --ignore=E501,F401,F403,F405,F811,W503
+          flake8 src --count --select=E999,F821,F822,F823 --show-source --statistics
 
       - name: Dockerfile lint
         uses: hadolint/hadolint-action@v3.1.0

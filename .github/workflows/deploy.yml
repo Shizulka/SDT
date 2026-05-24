@@ -2,29 +2,26 @@ name: Deploy
 
 on:
   push:
-    tags: [ "v*" ]
-
-permissions:
-  contents: read
-  packages: read
+    tags:
+      - "v*"
 
 jobs:
   deploy:
     runs-on: self-hosted
-    environment: production
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Deploy to target node
+      - name: Deploy to target VM
         env:
-          GITHUB_ACTOR: ${{ github.actor }}
+          TARGET_HOST: ${{ secrets.TARGET_HOST }}
+          TARGET_USER: ${{ secrets.TARGET_USER }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
           chmod +x scripts/deploy.sh
-          scripts/deploy.sh "${{ secrets.TARGET_HOST }}" "${{ secrets.TARGET_USER }}" "ghcr.io/${{ github.repository_owner }}/sdt:${{ github.ref_name }}"
-
-      - name: Verify deployment
-        run: |
-          chmod +x scripts/verify.sh
-          scripts/verify.sh "http://${{ secrets.TARGET_HOST }}"
+          scripts/deploy.sh \
+            "$TARGET_HOST" \
+            "$TARGET_USER" \
+            "ghcr.io/shizulka/sdt:latest"

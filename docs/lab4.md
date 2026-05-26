@@ -259,49 +259,118 @@ ansible -i inventory.ini all -m ping
 * запуск nginx
 
 
-# 8. Перевірка health endpoints
 
-Було виконано:
+# Розгортання FastAPI застосунку
 
-```bash
+Було реалізовано автоматичний deployment FastAPI застосунку через Ansible.
+
+Application копіюється у:
+
+```text id="k8h9jz"
+/opt/mywebapp
+```
+
+Systemd service:
+
+```text id="d9v8xg"
+lab4app.service
+```
+
+---
+
+# Health Endpoints
+
+Було реалізовано:
+
+## Alive endpoint
+
+```python
+@app.get("/health")
+```
+
+## Ready endpoint
+
+```python
+@app.get("/alive")
+```
+
+---
+
+# Перевірка health endpoints
+
+```bash id="sv7qk5"
 curl http://192.168.100.140/health
 curl http://192.168.100.140/alive
 ```
 
 Результат:
 
-```text
-{"status":"ok","message":"робе"}
-{"message":"робе"}
+```text id="g69w1y"
+alive
+ready
 ```
 
 ---
 
-# 10. Успішний запуск playbook
+# Перевірка FastAPI застосунку
 
-Фінальний запуск:
+Було перевірено роботу API:
 
-```bash
-ansible-playbook -i inventory.ini playbook.yml
+## Health endpoint
+
+```bash id="7fztw0"
+curl http://192.168.100.140/health
 ```
 
 Результат:
 
-```text
-PLAY RECAP
-
-192.168.100.140 : ok=19 changed=11 unreachable=0 failed=0
-192.168.100.38  : ok=10 changed=2  unreachable=0 failed=0
-```
-
-Повторний запуск:
-
-```text
-192.168.100.140 : ok=19 changed=5 unreachable=0 failed=0
-192.168.100.38  : ok=10 changed=2 unreachable=0 failed=0
+```json id="pqjlwm"
+{"status":"ok","message":"робе"}
 ```
 
 ---
+
+# Swagger документація
+
+Swagger UI доступний за адресою:
+
+```text id="4xgk8g"
+http://192.168.100.140/docs
+```
+
+---
+
+# Перевірка CRUD endpoint-ів
+
+Було перевірено endpoint-и для нотаток.
+
+## Отримання нотаток
+
+```bash id="4ph4df"
+curl http://192.168.100.140/notes
+```
+
+## Створення нотатки
+
+```bash id="1k52fz"
+curl -X POST http://192.168.100.140/notes
+```
+
+---
+
+# Успішний запуск playbook
+
+## ansible-playbook
+
+```text id="v6xb6s"
+PLAY RECAP
+
+192.168.100.140 : ok=23 changed=13 unreachable=0 failed=0
+192.168.100.38  : ok=10 changed=2  unreachable=0 failed=0
+```
+
+
+
 
 
 

@@ -380,7 +380,7 @@ tudent@test-VirtualBox:~/Стільниця/SDT_4$ ansible-playbook -i ansible/i
 
 PLAY RECAP *********************************************************************
 db1                        : ok=11   changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-worker                     : ok=11   changed=3    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+worker                     : ok=11   changed=4   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 
 student@test-VirtualBox:~/Стільниця/SDT_4$
 ```

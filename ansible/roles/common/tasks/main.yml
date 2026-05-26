@@ -2,31 +2,22 @@
   apt:
     update_cache: yes
 
-- name: Install common packages
-  apt:
-    name:
-      - curl
-      - git
-      - python3
-      - python3-pip
-    state: present
-
 - name: Create teacher user
   user:
     name: teacher
     shell: /bin/bash
     groups: sudo
     append: yes
-
-- name: Set teacher password
-  user:
-    name: teacher
     password: "{{ '12345678' | password_hash('sha512') }}"
+
+- name: Create gradebook directory
+  file:
+    path: /home/student
+    state: directory
+    mode: '0755'
 
 - name: Create gradebook file
   copy:
     dest: /home/student/gradebook
-    content: "1\n"
-    owner: student
-    group: student
-    mode: "0644"
+    content: "{{ gradebook_number }}\n"
+    mode: '0644'

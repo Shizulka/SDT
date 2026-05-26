@@ -1,18 +1,18 @@
 - name: Configure all servers
   hosts: all
-  become: true
+  become: yes
   roles:
     - common
 
 - name: Configure database server
   hosts: db
-  become: true
+  become: yes
   roles:
     - db
 
 - name: Configure worker server
   hosts: workers
-  become: true
+  become: yes
   roles:
     - app
     - nginx

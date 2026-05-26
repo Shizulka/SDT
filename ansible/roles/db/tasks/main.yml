@@ -13,15 +13,15 @@
 
 - name: Create database
   mysql_db:
-    name: mywebapp
+    name: "{{ db_name }}"
     state: present
     login_unix_socket: /run/mysqld/mysqld.sock
 
 - name: Create app database user
   mysql_user:
-    name: app
-    password: "12345678"
-    priv: "mywebapp.*:ALL"
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:ALL"
     host: "%"
     state: present
     login_unix_socket: /run/mysqld/mysqld.sock

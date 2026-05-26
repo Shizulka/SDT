@@ -1,0 +1,27 @@
+- name: Install MariaDB
+  apt:
+    name:
+      - mariadb-server
+      - python3-pymysql
+    state: present
+
+- name: Start MariaDB
+  systemd:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: Create database
+  mysql_db:
+    name: mywebapp
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock
+
+- name: Create app database user
+  mysql_user:
+    name: app
+    password: "12345678"
+    priv: "mywebapp.*:ALL"
+    host: "%"
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock

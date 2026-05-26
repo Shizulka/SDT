@@ -4,11 +4,11 @@ After=network.target
 
 [Service]
 User=app
+Group=app
 WorkingDirectory=/opt/mywebapp
 EnvironmentFile=/opt/mywebapp/.env
-ExecStart=/usr/local/bin/uvicorn src.infrastructure.main:app --host 127.0.0.1 --port 8000
+ExecStart=/usr/local/bin/uvicorn src.infrastructure.main:app --host 127.0.0.1 --port {{ app_port }}
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
-

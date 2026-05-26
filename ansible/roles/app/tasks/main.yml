@@ -3,6 +3,8 @@
     name:
       - python3
       - python3-pip
+      - python3-venv
+      - rsync
     state: present
 
 - name: Create app user
@@ -13,54 +15,52 @@
 
 - name: Create app directory
   file:
-    path: /opt/lab4app
+    path: /opt/mywebapp
     state: directory
     owner: app
     group: app
     mode: '0755'
 
-- name: Create simple app
+- name: Copy application source
+  synchronize:
+    src: "{{ playbook_dir }}/../src/"
+    dest: /opt/mywebapp/src/
+    delete: yes
+    recursive: yes
+
+- name: Copy requirements
   copy:
-    dest: /opt/lab4app/app.py
+    src: "{{ playbook_dir }}/../requirements.txt"
+    dest: /opt/mywebapp/requirements.txt
     owner: app
     group: app
     mode: '0644'
-    content: |
-      from http.server import BaseHTTPRequestHandler, HTTPServer
 
-      class Handler(BaseHTTPRequestHandler):
-          def do_GET(self):
-              if self.path == "/health/alive":
-                  self.send_response(200)
-                  self.end_headers()
-                  self.wfile.write(b"alive")
-              elif self.path == "/health/ready":
-                  self.send_response(200)
-                  self.end_headers()
-                  self.wfile.write(b"ready")
-              else:
-                  self.send_response(200)
-                  self.end_headers()
-                  self.wfile.write(b"Lab 4 app works")
+- name: Fix application ownership
+  file:
+    path: /opt/mywebapp
+    owner: app
+    group: app
+    recurse: yes
 
-      HTTPServer(("127.0.0.1", {{ app_port }}), Handler).serve_forever()
+- name: Install Python dependencies
+  pip:
+    requirements: /opt/mywebapp/requirements.txt
+    executable: pip3
+
+- name: Create application environment file
+  template:
+    src: mywebapp.env.j2
+    dest: /opt/mywebapp/.env
+    owner: app
+    group: app
+    mode: '0644'
 
 - name: Create app systemd service
-  copy:
+  template:
+    src: mywebapp.service.j2
     dest: /etc/systemd/system/lab4app.service
-    content: |
-      [Unit]
-      Description=Lab4 Web Application
-      After=network.target
-
-      [Service]
-      User=app
-      WorkingDirectory=/opt/lab4app
-      ExecStart=/usr/bin/python3 /opt/lab4app/app.py
-      Restart=always
-
-      [Install]
-      WantedBy=multi-user.target
+    mode: '0644'
 
 - name: Start app service
   systemd:

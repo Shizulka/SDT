@@ -1,462 +1,307 @@
+# Лабораторна робота №4
 
-# Лабораторна робота 4  
+## Terraform + Ansible Infrastructure Automation
 
+## Мета роботи
 
-# 1. Архітектура системи
-
-```text
-client → nginx → FastAPI application → MariaDB
-```
-
-Інфраструктура складалась із двох VM:
-
-| VM | Призначення |
-|---|---|
-| worker VM | nginx + FastAPI |
-| db VM | MariaDB |
+Метою лабораторної роботи було створення автоматизованої інфраструктури за допомогою Terraform та Ansible, налаштування віртуальних машин, автоматичне конфігурування сервісів, створення web application та reverse proxy.
 
 ---
 
-# 2. Terraform
+# Хід виконання роботи
 
-Terraform використовувався для опису інфраструктури у вигляді коду.
+## 1. Налаштування Terraform та Libvirt
 
----
+Для виконання лабораторної роботи було використано:
 
-## 2.1 Структура Terraform
+* Terraform
+* Libvirt/KVM
+* Cloud-init
+* Ansible
+* Ubuntu 22.04 cloud image
 
-```text
-terraform/
-├── main.tf
-├── .terraform.lock.hcl
-```
+Було створено дві віртуальні машини:
 
----
+* worker-vm
+* db-vm
 
-## 2.2 Конфігурація Terraform
+Terraform конфігурація створює:
+
+* NAT network
+* qcow2 диски
+* cloud-init ISO
+* VM domains
+* автоматичне отримання IP
 
 ### main.tf
 
 ```hcl
 terraform {
   required_providers {
-    virtualbox = {
-      source  = "terra-farm/virtualbox"
-      version = "0.2.2-alpha.1"
+    libvirt = {
+      source  = "dmacvicar/libvirt"
+      version = "0.8.3"
     }
   }
 }
 
-provider "virtualbox" {}
+provider "libvirt" {
+  uri = "qemu:///system"
+}
+```
 
-resource "virtualbox_vm" "worker" {
-  name   = "worker-vm"
-  image  = "https://app.vagrantup.com/ubuntu/boxes/noble64/versions/0.0.1/providers/virtualbox.box"
-  cpus   = 2
-  memory = "2048 mib"
+Було створено окрему мережу:
 
-  network_adapter {
-    type           = "hostonly"
-    host_interface = "vboxnet0"
+```hcl
+resource "libvirt_network" "lab4_network" {
+  name      = "lab4-network"
+  mode      = "nat"
+  domain    = "lab4.local"
+  addresses = ["192.168.100.0/24"]
+
+  dhcp {
+    enabled = true
   }
 }
+```
 
-resource "virtualbox_vm" "db" {
-  name   = "db-vm"
-  image  = "https://app.vagrantup.com/ubuntu/boxes/noble64/versions/0.0.1/providers/virtualbox.box"
-  cpus   = 2
-  memory = "2048 mib"
+Для cloud-init використовувався окремий файл `cloud-init.yml`.
 
-  network_adapter {
-    type           = "hostonly"
-    host_interface = "vboxnet0"
-  }
-}
+---
+
+## 2. Cloud-init конфігурація
+
+Cloud-init автоматично:
+
+* створює користувачів
+* вмикає SSH
+* встановлює Python
+* створює gradebook
+* налаштовує root filesystem
+
+### cloud-init.yml
+
+```yaml
+#cloud-config
+
+hostname: ${hostname}
+manage_etc_hosts: true
+
+ssh_pwauth: true
+
+users:
+  - default
+
+  - name: ansible
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    plain_text_passwd: "12345678"
+```
+
+Було додано:
+
+```yaml
+growpart:
+  mode: auto
+  devices: ['/']
+
+resize_rootfs: true
 ```
 
 ---
 
-## 2.3 Ініціалізація Terraform
+## 3. Виправлення проблем з Libvirt
 
-```bash
-student@test-VirtualBox:~/Стільниця/SDT/terraform$ terraform init
-Initializing the backend...
-Initializing provider plugins...
-- Finding terra-farm/virtualbox versions matching "0.2.2-alpha.1"...
-- Installing terra-farm/virtualbox v0.2.2-alpha.1...
-- Installed terra-farm/virtualbox v0.2.2-alpha.1 (self-signed, key ID 51EC33490F8CDBE5)
-Partner and community providers are signed by their developers.
-If you'd like to know more about provider signing, you can read about it here:
-https://www.terraform.io/docs/cli/plugins/signing.html
-Terraform has created a lock file .terraform.lock.hcl to record the provider
-selections it made above. Include this file in your version control repository
-so that Terraform can guarantee to make the same selections by default when
-you run "terraform init" in the future.
+Під час виконання роботи виникали проблеми:
 
-Terraform has been successfully initialized!
+### Permission denied для qcow2
 
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
-```
-
-## 2.4 Перевірка конфігурації
-
-```bash
-student@test-VirtualBox:~/Стільниця/SDT/terraform$ terraform validate
-Success! The configuration is valid.
-```
-
-
-## 2.5 Terraform Plan
-
-```bash
-terraform plan
-```
-
-### Результат
+Помилка:
 
 ```text
-student@test-VirtualBox:~/Стільниця/SDT/terraform$ terraform plan
-
-Terraform used the selected providers to generate the following execution plan.
-Resource actions are indicated with the following symbols:
-  + create
-
-Terraform will perform the following actions:
-
-  # virtualbox_vm.db will be created
-  + resource "virtualbox_vm" "db" {
-      + cpus   = 2
-      + id     = (known after apply)
-      + image  = "https://app.vagrantup.com/ubuntu/boxes/noble64/versions/0.0.1/providers/virtualbox.box"
-      + memory = "2048 mib"
-      + name   = "db-vm"
-      + status = "running"
-
-      + network_adapter {
-          + device                 = "IntelPro1000MTServer"
-          + host_interface         = "vboxnet0"
-          + ipv4_address           = (known after apply)
-          + ipv4_address_available = (known after apply)
-          + mac_address            = (known after apply)
-          + status                 = (known after apply)
-          + type                   = "hostonly"
-        }
-    }
-
-  # virtualbox_vm.worker will be created
-  + resource "virtualbox_vm" "worker" {
-      + cpus   = 2
-      + id     = (known after apply)
-      + image  = "https://app.vagrantup.com/ubuntu/boxes/noble64/versions/0.0.1/providers/virtualbox.box"
-      + memory = "2048 mib"
-      + name   = "worker-vm"
-      + status = "running"
-
-      + network_adapter {
-          + device                 = "IntelPro1000MTServer"
-          + host_interface         = "vboxnet0"
-          + ipv4_address           = (known after apply)
-          + ipv4_address_available = (known after apply)
-          + mac_address            = (known after apply)
-          + status                 = (known after apply)
-          + type                   = "hostonly"
-        }
-    }
-
-Plan: 2 to add, 0 to change, 0 to destroy.
+Could not open '/var/lib/libvirt/images/worker-vm.qcow2': Permission denied
 ```
 
-Terraform планував створення:
-- worker-vm;
-- db-vm.
+Для вирішення було змінено налаштування libvirt:
 
----
+```conf
+user = "root"
+group = "root"
+security_driver = "none"
+```
 
-# 3. Ansible
-
-Ansible використовувався для автоматизації конфігурації серверів.
-
----
-
-## 3.1 Структура Ansible
+Файл:
 
 ```text
-ansible/
-├── inventory.ini
-├── playbook.yml
-├── roles/
-│   ├── common/
-│   ├── db/
-│   ├── app/
-│   └── nginx/
+/etc/libvirt/qemu.conf
+```
+
+Після цього було виконано:
+
+```bash
+sudo systemctl restart libvirtd
 ```
 
 ---
 
-## 3.2 Inventory
+## 4. Успішний Terraform apply
 
-### inventory.ini
+Після виправлення конфігурації Terraform успішно створив інфраструктуру.
+
+### Успішний результат
+
+```text
+Apply complete! Resources: 6 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+db_ip = "192.168.100.38"
+worker_ip = "192.168.100.140"
+```
+
+Було створено:
+
+* db-vm
+* worker-vm
+* lab4-network
+* cloud-init диски
+* qcow2 диски
+
+---
+
+# 5. Налаштування Ansible
+
+Для конфігурації серверів використовувався Ansible.Після Terraform apply показуються айпі vm які треба вставити в inventory.ini.
+
+## inventory.ini
 
 ```ini
 [workers]
-worker ansible_host=192.168.56.101 ansible_user=student
+192.168.100.140 ansible_user=ansible ansible_password=12345678
 
 [db]
-db1 ansible_host=192.168.56.102 ansible_user=student
+192.168.100.38 ansible_user=ansible ansible_password=12345678
 
 [all:vars]
 ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 ```
 
 ---
 
-## 3.3 Перевірка доступності VM
+## 6. Перевірка доступності серверів
+
+Було виконано:
 
 ```bash
-student@test-VirtualBox:~$ ansible -i ~/Стільниця/SDT_4/ansible/inventory.ini all -m ping
-worker | SUCCESS => {
+ansible -i inventory.ini all -m ping
+```
+
+Успішний результат:
+
+```text
+192.168.100.140 | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
-db1 | SUCCESS => {
+
+192.168.100.38 | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
-student@test-VirtualBox:~$
-}
-```
-
-# 4. Playbook
-
-Було створено playbook для автоматизації конфігурації інфраструктури.
-
----
-
-## 4.1 playbook.yml
-
-```yaml
-- name: Configure all servers
-  hosts: all
-  become: true
-  roles:
-    - common
-
-- name: Configure database server
-  hosts: db
-  become: true
-  roles:
-    - db
-
-- name: Configure worker server
-  hosts: workers
-  become: true
-  roles:
-    - app
-    - nginx
 ```
 
 ---
 
-# 5. Common Role
+# 7. Налаштування ролей
 
-Роль `common` виконувала:
-- оновлення apt cache;
-- встановлення базових пакетів;
-- створення користувача teacher;
-- створення gradebook.
+Було створено ролі:
 
----
+* common
+* db
+* app
+* nginx
 
-## 5.1 Приклад common role
+## common role
 
-```yaml
-- name: Install common packages
-  apt:
-    name:
-      - curl
-      - git
-      - python3
-      - python3-pip
-    state: present
-```
+Виконує:
 
----
+* apt update
+* створення користувача teacher
+* створення gradebook
 
-# 6. Database Role
+## db role
 
-Роль `db` автоматизувала:
-- встановлення MariaDB;
-- запуск сервісу;
-- створення бази даних;
-- створення користувача app.
+Виконує:
 
----
+* встановлення MariaDB
+* створення БД
+* створення користувача БД
 
-## 6.1 Приклад db role
+## app role
 
-```yaml
-- name: Install MariaDB
-  apt:
-    name:
-      - mariadb-server
-      - python3-pymysql
-    state: present
-```
+Виконує:
 
----
+* створення користувача app
+* створення systemd service
+* створення web application
+* створення operator user
+* sudo permissions
 
-# 7. Application Role
+## nginx role
 
-Роль `app` виконувала:
-- створення app user;
-- копіювання FastAPI застосунку;
-- встановлення Python dependencies;
-- створення environment file;
-- створення systemd service.
+Виконує:
 
----
+* встановлення nginx
+* reverse proxy конфігурацію
+* запуск nginx
 
-## 7.1 Environment template
 
-```env
-DATABASE_URL=mysql+pymysql://app:12345678@192.168.56.102:3306/mywebapp
-```
+# 8. Перевірка health endpoints
 
----
-
-## 7.2 Systemd service
-
-```ini
-[Service]
-User=app
-WorkingDirectory=/opt/mywebapp
-ExecStart=/usr/local/bin/uvicorn src.infrastructure.main:app --host 127.0.0.1 --port 8000
-```
-
----
-
-# 8. Nginx Role
-
-Було налаштовано nginx reverse proxy.
-
----
-
-## 8.1 Конфігурація nginx
-
-```nginx
-server {
-    listen 80;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-    }
-}
-```
-
----
-
-# 9. Запуск Playbook
-
-## 9.1 Виконання playbook
+Було виконано:
 
 ```bash
-ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --ask-become-pass
+curl http://192.168.100.140/health
+curl http://192.168.100.140/alive
 ```
 
----
-
-## 9.2 Результат
+Результат:
 
 ```text
-tudent@test-VirtualBox:~/Стільниця/SDT_4$ ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --ask-become-pass
-
-/....
-
-PLAY RECAP *********************************************************************
-db1                        : ok=11   changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-worker                     : ok=11   changed=4   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-
-student@test-VirtualBox:~/Стільниця/SDT_4$
+{"status":"ok","message":"робе"}
+{"message":"робе"}
 ```
 
-Усі ролі були виконані успішно.
-
 ---
 
-# 10. Перевірка роботи сервісів
+# 10. Успішний запуск playbook
 
----
-
-## 10.1 Health endpoint
+Фінальний запуск:
 
 ```bash
-curl http://192.168.56.101/health
+ansible-playbook -i inventory.ini playbook.yml
 ```
 
-### Результат
-
-```json
-{
-  "status": "ok",
-  "message": "робе"
-}
-```
-
----
-
-## 10.2 Перевірка nginx
-
-```bash
-sudo systemctl status nginx
-```
-
-### Результат
+Результат:
 
 ```text
-Active: active (running)
+PLAY RECAP
+
+192.168.100.140 : ok=19 changed=11 unreachable=0 failed=0
+192.168.100.38  : ok=10 changed=2  unreachable=0 failed=0
 ```
 
----
-
-## 10.3 Перевірка MariaDB
-
-```bash
-sudo systemctl status mariadb
-```
-
-### Результат
+Повторний запуск:
 
 ```text
-Active: active (running)
+192.168.100.140 : ok=19 changed=5 unreachable=0 failed=0
+192.168.100.38  : ok=10 changed=2 unreachable=0 failed=0
 ```
 
 ---
 
-# 11. Ідемпотентність
 
-Playbook був повторно запущений без помилок.
 
----
-
-## 11.1 Повторний запуск
-
-```bash
-ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --ask-become-pass
-```
-
-### Результат
-
-```text
-failed=0
-unreachable=0
-```
-
-Повторний запуск playbook не призводив до критичних змін або помилок.
-
----
